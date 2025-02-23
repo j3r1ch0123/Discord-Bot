@@ -1,0 +1,6 @@
+openai
+requests
+nltk
+beautifulsoup4
+discord
+python-dotenv
