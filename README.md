@@ -20,6 +20,8 @@ Python 3.11+
 
 A Discord bot token (stored in .env)
 
+Dolphin-Phi's AI model (can be downloaded form ollama.com)
+
 Required dependencies (requirements.txt)
 
 Installation
