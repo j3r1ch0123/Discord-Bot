@@ -153,38 +153,6 @@ async def analyze(ctx, url):
                 soup = BeautifulSoup(text, "html.parser")
                 page_text = soup.get_text()
 
-                # Send the page text to the user in chunks
-                MAX_DISCORD_LENGTH = 2000  # Discord's character limit for a single message
-
-                chunks = [page_text[i:i + MAX_DISCORD_LENGTH] for i in range(0, len(page_text), MAX_DISCORD_LENGTH)]
-
-                for idx, chunk in enumerate(chunks, start=1):
-                    header = f"**Page Content (Part {idx}/{len(chunks)})**\n"
-                    await ctx.send(header + chunk)
-
-    except aiohttp.ClientError as e:
-        await ctx.send(f"An error occurred: {str(e)}")
-    except Exception as e:
-        await ctx.send(f"An unexpected error occurred: {str(e)}")
-
-# Analyze web pages command
-@bot.command()
-async def analyze(ctx, url):
-    # Check if the url starts with http:// or https://
-    if not url.startswith("http://") and not url.startswith("https://"):
-        url = "https://" + url # For security reasons, use https
-
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if response.status != 200:
-                    await ctx.send(f"Failed to retrieve the page. Status code: {response.status}")
-                    return
-
-                text = await response.text()
-                soup = BeautifulSoup(text, "html.parser")
-                page_text = soup.get_text()
-
                 # Use the sentiment analyzer to get the sentiment score
                 analyzer = SentimentIntensityAnalyzer()
                 sentiment_score = analyzer.polarity_scores(page_text)
