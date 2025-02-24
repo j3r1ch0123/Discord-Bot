@@ -167,6 +167,58 @@ async def analyze(ctx, url):
     except Exception as e:
         await ctx.send(f"An unexpected error occurred: {str(e)}")
 
+# Analyze web pages command
+@bot.command()
+async def analyze(ctx, url):
+    # Check if the url starts with http:// or https://
+    if not url.startswith("http://") and not url.startswith("https://"):
+        url = "https://" + url # For security reasons, use https
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    await ctx.send(f"Failed to retrieve the page. Status code: {response.status}")
+                    return
+
+                text = await response.text()
+                soup = BeautifulSoup(text, "html.parser")
+                page_text = soup.get_text()
+
+                # Use the sentiment analyzer to get the sentiment score
+                analyzer = SentimentIntensityAnalyzer()
+                sentiment_score = analyzer.polarity_scores(page_text)
+                sentiment = sentiment_score['compound']
+
+                await ctx.send(f"The sentiment of the page is {sentiment}.")
+
+                # Use the AI to process the information from the page
+                ai_response = requests.post(fallback_url, json={
+                    "model": fallback_model,
+                    "messages": messages,
+                    "max_tokens": 250,
+                    "temperature": 0.5,
+                    "max_length": 2000,
+                })
+
+                ai_response_json = ai_response.json()
+                ai_response_content = ai_response_json['choices'][0]['message']['content']
+
+                # Send the page text to the user in chunks
+                MAX_DISCORD_LENGTH = 2000  # Discord's character limit for a single message
+
+                chunks = [ai_response_content[i:i + MAX_DISCORD_LENGTH] for i in range(0, len(page_text), MAX_DISCORD_LENGTH)]
+
+                for idx, chunk in enumerate(chunks, start=1):
+                    header = f"**Page Content (Part {idx}/{len(chunks)})**\n"
+                    await ctx.send(header + chunk)
+
+
+    except aiohttp.ClientError as e:
+        await ctx.send(f"An error occurred: {str(e)}")
+    except Exception as e:
+        await ctx.send(f"An unexpected error occurred: {str(e)}")
+
 @bot.event
 async def on_command_error(ctx, error):
     # Specific error handling
