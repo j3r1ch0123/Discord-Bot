@@ -2,6 +2,7 @@ Discord Bot Template
 This is a Discord bot template that uses AI for conversation, web scraping, and page analysis. It is designed to be easily customizable, allowing users to define their own bot personalities.
 
 Features
+
 ✅ AI Chatbot – Responds to user messages using an AI model.
 
 ✅ Customizable Personality – Modify the system prompt to give your bot a unique character.
