@@ -4,6 +4,8 @@ import discord
 import os
 import aiohttp
 import asyncio
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from discord.ext import commands
 from discord.ext.commands import has_permissions
 from dotenv import load_dotenv
@@ -135,12 +137,10 @@ async def clear(ctx):
     user_chat_histories[user_id] = deque(maxlen=MAX_HISTORY_LENGTH)
     await ctx.send("Your chat history has been cleared.")
 
-# Analyze web pages command
 @bot.command()
 async def analyze(ctx, url):
-    # Check if the url starts with http:// or https://
     if not url.startswith("http://") and not url.startswith("https://"):
-        url = "https://" + url # For security reasons, use https
+        url = "https://" + url  # Ensure HTTPS for security
 
     try:
         async with aiohttp.ClientSession() as session:
@@ -153,34 +153,38 @@ async def analyze(ctx, url):
                 soup = BeautifulSoup(text, "html.parser")
                 page_text = soup.get_text()
 
-                # Use the sentiment analyzer to get the sentiment score
+                # Sentiment Analysis
                 analyzer = SentimentIntensityAnalyzer()
                 sentiment_score = analyzer.polarity_scores(page_text)
                 sentiment = sentiment_score['compound']
 
-                await ctx.send(f"The sentiment of the page is {sentiment}.")
+                await ctx.send(f"The sentiment of the page is `{sentiment}`.")
 
-                # Use the AI to process the information from the page
-                ai_response = requests.post(fallback_url, json={
+                # Prepare AI request
+                messages = [
+                    {"role": "system", "content": "Analyze the following webpage and summarize it:"},
+                    {"role": "user", "content": page_text[:4000]}  # Limit to 4000 characters
+                ]
+
+                async with session.post(fallback_url, json={
                     "model": fallback_model,
                     "messages": messages,
                     "max_tokens": 250,
-                    "temperature": 0.5,
-                    "max_length": 2000,
-                })
+                    "temperature": 0.5
+                }) as ai_response:
+                    if ai_response.status == 200:
+                        ai_data = await ai_response.json()
+                        ai_response_content = ai_data['choices'][0]['message']['content']
+                    else:
+                        ai_response_content = "Error: AI request failed."
 
-                ai_response_json = ai_response.json()
-                ai_response_content = ai_response_json['choices'][0]['message']['content']
-
-                # Send the page text to the user in chunks
-                MAX_DISCORD_LENGTH = 2000  # Discord's character limit for a single message
-
-                chunks = [ai_response_content[i:i + MAX_DISCORD_LENGTH] for i in range(0, len(page_text), MAX_DISCORD_LENGTH)]
+                # Split and send response in chunks
+                MAX_DISCORD_LENGTH = 2000
+                chunks = [ai_response_content[i:i + MAX_DISCORD_LENGTH] for i in range(0, len(ai_response_content), MAX_DISCORD_LENGTH)]
 
                 for idx, chunk in enumerate(chunks, start=1):
-                    header = f"**Page Content (Part {idx}/{len(chunks)})**\n"
+                    header = f"**AI Analysis (Part {idx}/{len(chunks)})**\n"
                     await ctx.send(header + chunk)
-
 
     except aiohttp.ClientError as e:
         await ctx.send(f"An error occurred: {str(e)}")
