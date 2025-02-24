@@ -28,6 +28,8 @@ logging.basicConfig(
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+nltk.download('vader_lexicon')
+
 # Per-user chat history
 user_chat_histories = {}
 
